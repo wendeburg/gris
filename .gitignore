@@ -16,3 +16,6 @@ Cargo.lock
 
 # Added by cargo
 /Cargo.lock
+
+# CLion
+/.idea
