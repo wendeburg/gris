@@ -1,0 +1,12 @@
+[package]
+name = "examples"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[dev-dependencies]
+gris = { version = "0.1.0", path = "../gris" }
+
+[[example]]
+name = "hello_world"
+path = "hello_world.rs"
