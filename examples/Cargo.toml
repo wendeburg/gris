@@ -6,6 +6,7 @@ edition = "2021"
 
 [dev-dependencies]
 gris = { version = "0.1.0", path = "../gris" }
+tokio = { version = "1.32.0", features = ["full"] }
 
 [[example]]
 name = "hello_world"
