@@ -1,17 +1,17 @@
 use std::collections::HashMap;
-use std::fmt::{Debug, Formatter};
-use crate::http::{Request, Response};
-use crate::routing::{RouteHandlerReturnType};
+use std::fmt::Debug;
+use crate::routing::{Callable};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct PathTree {
     root: PathNode
 }
 
+#[derive(Debug)]
 struct PathNode {
     pub path_part: String,
     pub children: HashMap<String, PathNode>,
-    pub handlers: Vec<Box<dyn Fn(&'static mut Request, &'static mut Response) -> RouteHandlerReturnType>>
+    pub handler: Option<Box<dyn Callable>>
 }
 
 impl PathNode {
@@ -19,25 +19,18 @@ impl PathNode {
         PathNode {
             path_part: path.to_owned(),
             children: HashMap::new(),
-            handlers: Vec::new()
+            handler: None
         }
     }
 
-    pub fn add_handler(&mut self, f: impl Fn(&'static mut Request, &'static mut Response) -> RouteHandlerReturnType + 'static) {
-        self.handlers.push(Box::new(f));
-    }
-}
-
-impl Debug for PathNode {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f,
-               "PathNode {{ path_part: {}, children: {:?}, handlers (length): {}}}", self.path_part, self.children, self.handlers.len())
+    pub fn add_handler(&mut self, handler: impl Callable + 'static) {
+        self.handler = Some(Box::new(handler));
     }
 }
 
 impl PartialEq for PathNode {
     fn eq(&self, other: &Self) -> bool {
-        return self.path_part == other.path_part && self.children == other.children && self.handlers.len() == other.handlers.len();
+        return self.path_part == other.path_part && self.children == other.children;
     }
 
     fn ne(&self, other: &Self) -> bool {
@@ -52,7 +45,7 @@ impl PathTree {
         }
     }
 
-    pub fn insert(&mut self, path: &str, f: impl Fn(&'static mut Request, &'static mut Response) -> RouteHandlerReturnType + 'static) {
+    pub fn insert(&mut self, path: &str, handler: impl Callable + 'static) {
         let mut current_node= &mut self.root;
 
         let path_parts = path.split("/").filter(|&element| !element.is_empty());
@@ -65,17 +58,7 @@ impl PathTree {
             current_node = current_node.children.entry(path.to_owned()).or_insert(PathNode::new(path));
         }
 
-        current_node.add_handler(f);
-    }
-}
-
-impl PartialEq for PathTree {
-    fn eq(&self, other: &Self) -> bool {
-        return self.root == other.root;
-    }
-
-    fn ne(&self, other: &Self) -> bool {
-        return !self.eq(other);
+        current_node.add_handler(handler);
     }
 }
 
@@ -87,7 +70,10 @@ mod tests {
     fn insertion_1() {
         let path = "/api/users/:user_id";
 
-        let user_id_node = PathNode::new(":user_id");
+        let mut user_id_node = PathNode::new(":user_id");
+        user_id_node.handlers.push(|req, res| {
+            println!("hello!");
+        });
         let mut users_node = PathNode::new("users");
         users_node.children.insert(":user_id".to_owned(), user_id_node);
         let mut api_node = PathNode::new("api");
@@ -96,9 +82,9 @@ mod tests {
         expected.root.children.insert("api".to_owned(), api_node);
 
         let mut actual = PathTree::new();
-        actual.insert(path, |&mut Request, &mut Response| Box::pin(async {
+        actual.insert(path, |req, res| {
             println!("hello!");
-        }));
+        });
 
         assert_eq!(expected, actual);
     }
@@ -109,9 +95,9 @@ mod tests {
         let expected = PathTree::new();
 
         let mut actual = PathTree::new();
-        actual.insert(path, |&mut Request, &mut Response| Box::pin(async {
+        actual.insert(path, |req, res| {
             println!("hello!");
-        }));
+        });
 
         assert_eq!(expected, actual);
     }
@@ -131,9 +117,9 @@ mod tests {
         expected.root.children.insert("api".to_owned(), api_node);
 
         let mut actual = PathTree::new();
-        actual.insert(path, |&mut Request, &mut Response| Box::pin(async {
+        actual.insert(path, |req, res| {
             println!("hello!");
-        }));
+        });
 
         assert_eq!(expected, actual);
     }
@@ -153,9 +139,9 @@ mod tests {
         expected.root.children.insert("api".to_owned(), api_node);
 
         let mut actual = PathTree::new();
-        actual.insert(path, |&mut Request, &mut Response| Box::pin(async {
+        actual.insert(path, |req, res| {
             println!("hello!");
-        }));
+        });
 
         assert_eq!(expected, actual);
     }
@@ -166,14 +152,14 @@ mod tests {
         let other_path = "/api";
 
         let mut right = PathTree::new();
-        right.insert(path, |&mut Request, &mut Response| Box::pin(async {
+        right.insert(path, |req, res| {
             println!("hello!");
-        }));
+        });
 
         let mut left = PathTree::new();
-        left.insert(other_path, |&mut Request, &mut Response| Box::pin(async {
+        left.insert(other_path, |req, res| {
             println!("hello!");
-        }));
+        });
 
         assert_eq!(left, right);
     }

@@ -1,16 +1,16 @@
 use std::collections::HashMap;
 use super::HttpMethod;
 
-pub struct Request {
-    headers: HashMap<String, Vec<u8>>,
+pub struct Request<B> {
+    headers: HashMap<String, String>,
     version: Option<u8>,
     path: Option<String>,
-    body: Option<Box<[u8]>>,
+    body: Option<B>,
     method: Option<HttpMethod>
 }
 
-impl Request {
-    fn new() -> Request {
+impl<B> Request<B> {
+    fn new() -> Self {
         Request {
             headers: HashMap::new(),
             version: None,
@@ -22,11 +22,11 @@ impl Request {
 }
 
 trait RequestFromHttparseRequest {
-    fn to_gris_request(self) -> Request;
+    fn to_gris_request(self) -> Request<Vec<u8>>;
 }
 
 impl RequestFromHttparseRequest for httparse::Request<'_, '_> {
-    fn to_gris_request(self) -> Request {
+    fn to_gris_request(self) -> Request<Vec<u8>>{
         let mut new_request = Request::new();
 
         if let Some(method) = self.method {
@@ -40,7 +40,7 @@ impl RequestFromHttparseRequest for httparse::Request<'_, '_> {
         }
 
         for header in self.headers {
-            new_request.headers.insert(header.name.to_owned(), header.value.to_owned());
+            new_request.headers.insert(header.name.to_owned(), String::from_utf8(header.value.to_vec()).unwrap());
         }
 
         return new_request;

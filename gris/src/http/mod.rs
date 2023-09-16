@@ -1,10 +1,9 @@
-pub use response::Response;
-pub use request::Request;
+pub use response::{Response};
+pub use request::{Request};
 pub use server::HttpServer;
 
 mod response;
 mod request;
-
 mod server;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
