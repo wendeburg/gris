@@ -13,13 +13,13 @@ impl Debug for dyn Callable {
     }
 }
 
-pub struct DefaultCaller<B: 'static> {
+pub struct DefaultCallable<B: 'static> {
     req: Option<Request<B>>,
     res: Option<Response>,
     function: fn(Request<B>, Response) -> ()
 }
 
-impl<B> Callable for DefaultCaller<B> {
+impl<B> Callable for DefaultCallable<B> {
     fn call(&mut self) -> () {
         if let None = self.req {
             panic!("Cannot call handler without Request object");
